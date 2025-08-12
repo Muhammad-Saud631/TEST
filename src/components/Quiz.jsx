@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import DifficultyStars from "./DifficultyStars";
 import ScoreBar from "./ScoreBar";
+import { GiAlarmClock } from "react-icons/gi";
 
 /* helper to decode URL encoded strings from your JSON */
 function decodeStr(s) {
@@ -11,14 +12,11 @@ function decodeStr(s) {
   }
 }
 
-/* normalize question object from your JSON structure */
 function normalize(raw) {
-  // raw might have keys: question, correct_answer, incorrect_answers, difficulty, category, type
   const q = {
     category: raw.category ? decodeStr(raw.category) : "",
     difficulty: raw.difficulty ? raw.difficulty : "easy",
     question: raw.question ? decodeStr(raw.question) : "",
-    // build options array: incorrect_answers + correct_answer
     options: [],
     answer: raw.correct_answer ? decodeStr(raw.correct_answer) : raw.answer || ""
   };
@@ -29,12 +27,10 @@ function normalize(raw) {
     q.options = raw.options.map(decodeStr);
   }
 
-  // push correct answer last then we'll shuffle where needed
   if (q.answer && !q.options.includes(q.answer)) {
     q.options.push(q.answer);
   }
 
-  // for boolean type (True/False) ensure options are present
   if (raw.type === "boolean") {
     q.options = ["True", "False"];
   }
@@ -45,8 +41,8 @@ function normalize(raw) {
 export default function Quiz() {
   const totalPerQuestionSeconds = 45;
 
-  const [rawQuestions, setRawQuestions] = useState(null); // raw JSON array
-  const [questions, setQuestions] = useState([]); // normalized
+  const [rawQuestions, setRawQuestions] = useState(null);
+  const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [attempted, setAttempted] = useState(0);
   const [score, setScore] = useState(0);
@@ -57,7 +53,6 @@ export default function Quiz() {
   const [finished, setFinished] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // fetch questions from public/questions.json
   useEffect(() => {
     fetch("/questions.json")
       .then((res) => res.json())
@@ -73,11 +68,9 @@ export default function Quiz() {
       });
   }, []);
 
-  // shuffle options for current question (memo so it doesn't reshuffle on each render)
   const options = useMemo(() => {
     if (!questions.length) return [];
     const arr = [...questions[index].options];
-    // Fisher-Yates shuffle
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -85,24 +78,21 @@ export default function Quiz() {
     return arr;
   }, [questions, index]);
 
-  // timer logic
   useEffect(() => {
     if (loading || finished) return;
     if (timeLeft <= 0) {
-      // time up: treat as no selection then auto-next
       setSelected(null);
       setShowFeedback(false);
-      handleNext(); // move to next question
+      handleNext();
       return;
     }
     const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, loading, finished]);
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
+      <div style={{ padding: 40, textAlign: "center", fontFamily: "sans-serif" }}>
         <h3>Loading questions...</h3>
       </div>
     );
@@ -110,7 +100,7 @@ export default function Quiz() {
 
   if (!questions.length) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
+      <div style={{ padding: 40, textAlign: "center", fontFamily: "sans-serif" }}>
         <h3>No questions found. Put your questions.json into public/ folder.</h3>
       </div>
     );
@@ -119,20 +109,17 @@ export default function Quiz() {
   const q = questions[index];
 
   function handleSelect(opt) {
-    if (selected !== null) return; // prevent double click
+    if (selected !== null) return;
     setSelected(opt);
     const correct = opt === q.answer;
     setIsCorrect(correct);
     setShowFeedback(true);
     setAttempted((a) => a + 1);
     if (correct) setScore((s) => s + 1);
-    // stop timer by setting to current (will be cleared by effect cleanup)
     setTimeLeft((t) => t);
   }
 
   function handleNext() {
-    // if user hasn't selected and time still left, do nothing (Next disabled)
-    // but if Next called by time-out or after selection, proceed
     if (selected === null && timeLeft > 0) return;
 
     if (index + 1 < questions.length) {
@@ -157,50 +144,116 @@ export default function Quiz() {
     setFinished(false);
   }
 
-  // progress bar numbers
   const minPercent = (score / questions.length) * 100;
   const currentPercent = attempted > 0 ? (score / attempted) * 100 : 0;
   const maxPercent = ((score + (questions.length - attempted)) / questions.length) * 100;
 
   return (
-    <div className="quiz-card">
-      <div className="top-progress" style={{ width: `${((index) / questions.length) * 100 + 5}%` }} />
+    <div
+      className="quiz-card"
+      style={{
+        borderRadius: 10,
+        width: 700,
+        height: 700,
+        margin: "20px auto",
+        padding: 30,
+        boxShadow: "0 0 15px rgba(0,0,0,0.2)",
+        backgroundColor: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        overflowY: "auto",
+        fontFamily: "sans-serif",
+      }}
+    >
+      <div className="top-progress" style={{ width: `${(index / questions.length) * 100 + 5}%` }} />
 
       {finished ? (
-        <div className="result-box">
+        <div className="result-box" style={{ fontFamily: "sans-serif" }}>
           <h2>Quiz Finished</h2>
-          <p className="result-score">You scored {score} out of {questions.length}</p>
-          <button className="primary" onClick={resetQuiz}>Play Again</button>
+          <p className="result-score">
+            You scored {score} out of {questions.length}
+          </p>
+          <button className="primary" onClick={resetQuiz}>
+            Play Again
+          </button>
         </div>
       ) : (
         <>
-          <div className="header-row">
+          <div className="header-row" style={{ fontFamily: "sans-serif" }}>
             <div>
               <div className="category">{q.category}</div>
-              <div className="qcount">Question {index + 1} of {questions.length}</div>
-              <div className="star-row"><DifficultyStars value={ q.difficulty === "easy" ? 1 : q.difficulty === "medium" ? 2 : 3 } /></div>
+              <div className="qcount">
+                Question {index + 1} of {questions.length}
+              </div>
+              <div className="star-row" style={{ fontSize: "2.5rem" }}>
+                <DifficultyStars value={q.difficulty === "easy" ? 1 : q.difficulty === "medium" ? 2 : 3} />
+              </div>
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <div className="timer-wrap">
-                <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#23303a" d="M12 2a1 1 0 0 1 .95.684L14.6 7.98l5.68.83a1 1 0 0 1 .56 1.7l-4.11 3.99 0.97 5.66a1 1 0 0 1-1.45 1.05L12 19.77 6.75 21.12a1 1 0 0 1-1.45-1.05l0.97-5.66L1.17 9.21a1 1 0 0 1 .56-1.7l5.68-.83L11.05 2.68A1 1 0 0 1 12 2z"/></svg>
-                <div className="timer-text">{String(Math.floor(timeLeft/60)).padStart(2,"0")}:{String(timeLeft%60).padStart(2,"0")}</div>
+            <div style={{ textAlign: "right", marginTop: "43px" }}>
+              <div className="timer-wrap" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <GiAlarmClock
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                  }}
+                />
+                <div className="timer-text">
+                  {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:
+                  {String(timeLeft % 60).padStart(2, "0")}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="question">{q.question}</div>
+          <div
+            className="question"
+            style={{ marginTop: "-40px", paddingBottom: "8px" }}
+          >
+            {q.question}
+          </div>
 
-          <div className="options">
+          <div
+            className="options"
+            style={{ marginTop: "-30px" }}
+          >
             {options.map((opt) => {
-              let cls = "option-btn";
+              let style = {};
+              let disabled = selected !== null;
+
               if (selected !== null) {
-                if (opt === q.answer) cls += " correct";
-                else if (opt === selected && selected !== q.answer) cls += " wrong";
-                else cls += " disabled";
+                if (opt === q.answer) {
+                  style = {
+                    backgroundColor: "#4CAF50",
+                    color: "white",
+                    borderColor: "#388E3C",
+                    cursor: "default",
+                  };
+                } else if (opt === selected && selected !== q.answer) {
+                  style = {
+                    backgroundColor: "#f44336",
+                    color: "white",
+                    borderColor: "#d32f2f",
+                    cursor: "default",
+                  };
+                } else {
+                  style = {
+                    opacity: 0.6,
+                    pointerEvents: "none",
+                    cursor: "default",
+                  };
+                }
               }
+
               return (
-                <button key={opt} className={cls} onClick={() => handleSelect(opt)} disabled={selected !== null}>
+                <button
+                  key={opt}
+                  style={style}
+                  className="option-btn"
+                  onClick={() => handleSelect(opt)}
+                  disabled={disabled}
+                >
                   {opt}
                 </button>
               );
@@ -208,21 +261,44 @@ export default function Quiz() {
           </div>
 
           {showFeedback && (
-            <div className="feedback">{isCorrect ? "Correct!" : "Wrong!"}</div>
+            <div
+              className="feedback"
+              style={{ color: isCorrect ? "green" : "red", fontWeight: "bold", fontSize: "1.2rem", marginTop: "10px" }}
+            >
+              {isCorrect ? "Correct!" : "Wrong!"}
+            </div>
           )}
 
           <div style={{ textAlign: "center" }}>
-            <button className="next-btn" onClick={handleNext} disabled={selected === null && timeLeft>0}>
-              {index+1 < questions.length ? "Next Question" : "Finish"}
+            <button
+              className="next-btn"
+              onClick={handleNext}
+              disabled={selected === null && timeLeft > 0}
+              style={{ minWidth: "160px", padding: "10px 20px" }}
+            >
+              {index + 1 < questions.length ? "Next Question" : "Finish"}
             </button>
           </div>
 
           <div className="footer-row">
-            <div className="small score-number">Score: {Math.round((score/ (attempted || 1)) * 100)}%</div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "10px",
+                fontWeight: "bold",
+              }}
+            >
+              <div className="small score-number">
+                Score: {Math.round((score / (attempted || 1)) * 100)}%
+              </div>
+              <div className="small score-number">
+                Max Score: {Math.round(maxPercent)}%
+              </div>
+            </div>
             <div className="scorebar-wrap">
               <ScoreBar min={minPercent} current={currentPercent} max={maxPercent} />
             </div>
-            <div className="small score-number">Max: {Math.round(maxPercent)}%</div>
           </div>
         </>
       )}
